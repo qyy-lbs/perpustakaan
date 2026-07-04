@@ -1,0 +1,200 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  MAHASISWA
+  DOSEN
+  PUSTAKAWAN
+}
+
+enum BookStatus {
+  TERSEDIA
+  TIDAK_TERSEDIA
+}
+
+enum ReservationStatus {
+  MENUNGGU_PENGAMBILAN
+  DIPINJAM
+  DIBATALKAN
+  EXPIRED
+}
+
+enum LoanStatus {
+  AKTIF
+  TERLAMBAT
+  SELESAI
+}
+
+enum FineStatus {
+  BELUM_DIBAYAR
+  DIBAYAR
+}
+
+enum PaymentMethod {
+  TUNAI
+  TRANSFER
+  QRIS
+}
+enum SuggestionStatus {
+  MENUNGGU
+  DITINJAU
+  DISETUJUI
+  DITOLAK
+  TERSEDIA
+}
+
+enum CollectionType {
+  FISIK
+  EBOOK
+  JURNAL
+  E_JOURNAL
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  nama      String
+  email     String   @unique
+  password  String
+  role      Role
+  nimNidn   String?  @unique
+  noTelepon String?
+  prodi     String?
+  createdAt DateTime @default(now())
+  reservations BookReservation[]
+  loans        Loan[]
+  suggestions BookSuggestion[]
+}
+
+model Category {
+  id        Int      @id @default(autoincrement())
+  nama      String   @unique
+  createdAt DateTime @default(now())
+
+  books     Book[]
+}
+
+model Rack {
+  id        Int      @id @default(autoincrement())
+  kodeRak   String   @unique
+  lokasi    String?
+  createdAt DateTime @default(now())
+
+  books     Book[]
+}
+
+model Book {
+  id             Int        @id @default(autoincrement())
+  isbn           String?    @unique
+  judul          String
+  pengarang      String
+  penerbit       String?
+  tahunTerbit    Int?
+  bahasa         String?
+  jumlahHalaman  Int?
+  deskripsi      String?
+  coverUrl       String?
+  stokTotal      Int        @default(0)
+  stokTersedia   Int        @default(0)
+  stokMinimum    Int        @default(1)
+  status         BookStatus @default(TERSEDIA)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  deletedAt DateTime?
+  jenisKoleksi CollectionType @default(FISIK)
+  isDigital    Boolean        @default(false)
+  fileUrl      String?
+
+  categoryId     Int?
+  rackId         Int?
+
+  category       Category?  @relation(fields: [categoryId], references: [id])
+  rack           Rack?      @relation(fields: [rackId], references: [id])
+  reservations BookReservation[]
+  loans        Loan[]
+}
+
+model BookReservation {
+  id            Int               @id @default(autoincrement())
+  userId        Int
+  bookId        Int
+  kodeBooking   String            @unique
+  qrCodeData    String?
+  tanggalAmbil  DateTime
+  berlakuSampai DateTime
+  status        ReservationStatus @default(MENUNGGU_PENGAMBILAN)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  user          User              @relation(fields: [userId], references: [id])
+  book          Book              @relation(fields: [bookId], references: [id])
+  loan          Loan?
+}
+
+model Loan {
+  id             Int        @id @default(autoincrement())
+  reservationId  Int?       @unique
+  userId         Int
+  bookId         Int
+  tanggalPinjam  DateTime   @default(now())
+  jatuhTempo     DateTime
+  tanggalKembali DateTime?
+  status         LoanStatus @default(AKTIF)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  reservation    BookReservation? @relation(fields: [reservationId], references: [id])
+  user           User             @relation(fields: [userId], references: [id])
+  book           Book             @relation(fields: [bookId], references: [id])
+  fine           Fine?
+
+}
+
+model Fine {
+  id             Int        @id @default(autoincrement())
+  loanId         Int        @unique
+  hariTerlambat  Int        @default(0)
+  jumlah         Int        @default(0)
+  status         FineStatus @default(BELUM_DIBAYAR)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  loan           Loan       @relation(fields: [loanId], references: [id])
+  payment        Payment?
+}
+
+model Payment {
+  id             Int           @id @default(autoincrement())
+  fineId         Int           @unique
+  metode         PaymentMethod @default(TUNAI)
+  nominalDenda   Int
+  jumlahBayar    Int
+  kembalian      Int
+  createdAt      DateTime      @default(now())
+
+  fine           Fine          @relation(fields: [fineId], references: [id])
+}
+
+model BookSuggestion {
+  id            Int              @id @default(autoincrement())
+  userId        Int
+  nomorUsulan   String           @unique
+  judul         String
+  penulis       String
+  penerbit      String?
+  tahunTerbit   Int?
+  kategori      String?
+  mataKuliah    String?
+  alasan        String?
+  status        SuggestionStatus @default(MENUNGGU)
+  catatan       String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  user          User             @relation(fields: [userId], references: [id])
+}
