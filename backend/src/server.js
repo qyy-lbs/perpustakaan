@@ -54,10 +54,7 @@ app.get("/api/users", async (req, res) => {
 
 app.use(
   cors({
-    origin: [
-      "http://localhost:5173",
-      "https://perpustakaan-biah.vercel.app"
-    ],
+    origin: true,
     credentials: true,
   })
 );
@@ -78,6 +75,10 @@ app.use("/api/reports", reportRoutes);
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-  console.log(`Server berjalan di port ${PORT}`);
-});
+if (process.env.NODE_ENV !== "production") {
+  app.listen(PORT, () => {
+    console.log(`Server berjalan di port ${PORT}`);
+  });
+}
+
+export default app;
