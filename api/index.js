@@ -1,11 +1,12 @@
-let app;
+let appPromise;
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   try {
-    if (!app) {
-      const module = await import("../backend/src/server.js");
-      app = module.default;
+    if (!appPromise) {
+      appPromise = import("../backend/src/server.js").then((mod) => mod.default);
     }
+
+    const app = await appPromise;
 
     return app(req, res);
   } catch (error) {
@@ -16,4 +17,4 @@ export default async function handler(req, res) {
       error: error.message,
     });
   }
-}
+};
